@@ -1,0 +1,20 @@
+{
+    "template_version": 1,
+    "flow_name": "",
+    "deployments": [
+        {
+            "name": "main",
+            "schedule": "0 7 * * 1",
+            "description": "",
+            "tags": [],
+            "parameters": {}
+        }
+    ],
+    "description": "",
+    "tags": [],
+    "sql_deploy_to ": "",
+    "flow_data": {
+        "production": {},
+        "development": {}
+    }
+}

@@ -1,0 +1,52 @@
+on:
+  push:
+    branches:
+    - main
+    - develop
+    
+jobs:
+  build:
+    name: Deploy Flow
+    runs-on: ubuntu-latest
+    steps:
+
+     - name: Sets env vars for production
+       run: echo "WORK_QUEUE=production" >> $GITHUB_ENV
+       if: github.ref == 'refs/heads/main'
+
+     - name: Sets env vars for production
+       run: echo "WORK_QUEUE=development" >> $GITHUB_ENV
+       if: github.ref == 'refs/heads/develop'
+
+     - name: Checkout
+       uses: actions/checkout@v3
+        
+     - name: Update pip
+       run: python3 -m pip install --upgrade pip
+
+     - name: Upgrade pyOpenSSL and cryptography
+       run: python3 -m pip install -U pyOpenSSL cryptography
+        
+     - name: Install requirements
+       run: pip3 install -r requirements.txt
+        
+     - name: Login to Prefect
+       run: prefect cloud login -k ${{ secrets.PREFECT_API_KEY }} -w caredesign/${{ env.WORK_QUEUE }}
+        
+    #  - name: Run tests
+    #    run: pytest tests/
+
+     - name: Deploy to Prefect
+       run: python3 deploy.py ${{ env.WORK_QUEUE }}
+
+  # migrate:
+  #   name: Migrate Database
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Test container
+  #       run: python3 deploy/migrate.py
+        
+    
+
+
+

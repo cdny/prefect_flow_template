@@ -1,0 +1,3 @@
+adlfs
+prefect==2.10.6
+etlcore @ git+https://github.com/cdny/etlcore@22e6a66cb59a1c6429e1d47a41416fb0046e0a60

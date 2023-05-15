@@ -1,0 +1,12 @@
+.vscode
+.devcontainer
+.gitignore
+.github
+.git
+.venv
+.prefectignore
+sql
+tests
+deploy.py
+README
+__pycache__/
