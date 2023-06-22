@@ -6,8 +6,6 @@ from prefect.deployments import Deployment
 from prefect.filesystems import Azure
 from prefect.server.schemas.schedules import CronSchedule
 from prefect.infrastructure.container import DockerContainer, ImagePullPolicy
-from prefect_github import GitHubCredentials
-from prefect_github.repository import GitHubRepository
 
 from flow import pipeline
 
@@ -57,13 +55,6 @@ except IndexError:
 f = open("config.json")
 config = json.load(f)
 
-github_credentials_block = GitHubCredentials.load("github-access")
-repository_block = GitHubRepository(
-    credentials=github_credentials_block,
-    repository_url=f'https://gitbub.com/{config["repository_url"]}',
-    reference="main" if environment == "production" else "develop"
-)
-
 az_block = Azure.load("flow-storage")
 
 # Let's deploy it/them
@@ -108,7 +99,7 @@ for deployment in config["deployments"]:
             work_queue_name="default",
             work_pool_name="default-agent-pool",
             apply=True,
-            storage=repository_block if environment in ["production", "development"] else "local",
+            storage=az_block if environment in ["production", "development"] else "local",
             path=path,
             schedule=deployment["schedule"],
             is_schedule_active=True if environment == "production" or deployment["schedule"] != None else False,

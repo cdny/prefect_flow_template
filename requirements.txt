@@ -1,2 +1,1 @@
 etlcore@git+https://github.com/cdny/etlcore@main
-prefect-github
