@@ -11,11 +11,11 @@ jobs:
     steps:
 
      - name: Sets env vars for production
-       run: echo "WORK_QUEUE=production" >> $GITHUB_ENV
+       run: echo "DEPLOY_ENVIRONMENT=production" >> $GITHUB_ENV
        if: github.ref == 'refs/heads/main'
 
      - name: Sets env vars for production
-       run: echo "WORK_QUEUE=development" >> $GITHUB_ENV
+       run: echo "DEPLOY_ENVIRONMENT=development" >> $GITHUB_ENV
        if: github.ref == 'refs/heads/develop'
 
      - name: Checkout
@@ -31,21 +31,13 @@ jobs:
        run: pip3 install -r requirements.txt
         
      - name: Login to Prefect
-       run: prefect cloud login -k ${{ secrets.PREFECT_API_KEY }} -w caredesign/${{ env.WORK_QUEUE }}
+       run: prefect cloud login -k ${{ secrets.PREFECT_API_KEY }} -w caredesign/${{ env.DEPLOY_ENVIRONMENT }}
         
     #  - name: Run tests
     #    run: pytest tests/
 
      - name: Deploy to Prefect
-       run: python3 deploy.py ${{ env.WORK_QUEUE }}
-
-  # migrate:
-  #   name: Migrate Database
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Test container
-  #       run: python3 deploy/migrate.py
-        
+       run: python3 deploy.py
     
 
 

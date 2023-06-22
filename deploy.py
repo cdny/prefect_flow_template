@@ -1,35 +1,74 @@
-import json, os, traceback, subprocess, sys
+import json, os, traceback, sys
+
+import inquirer
 
 from prefect.deployments import Deployment
 from prefect.filesystems import Azure
 from prefect.server.schemas.schedules import CronSchedule
+from prefect.infrastructure.container import DockerContainer, ImagePullPolicy
+from prefect_github import GitHubCredentials
+from prefect_github.repository import GitHubRepository
 
 from flow import pipeline
 
+
 # Which enviroment are we deploying to
+valid_environments = ['local', 'development', 'production']
+
+class DeploymentEnvironmentException(Exception):
+    "Raised when the deployment environment is not specified or cannot be found"
+    pass
+
+# Helper Functions
+def notEnvironment(env):
+    return env not in valid_environments
+
+def replace_line_breaks_with_spaces(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
+        content = content.replace('\n', ' ')
+        return content
+
 try:
     environment = sys.argv[1]
-    if environment not in ["production", "development"]:
+    if notEnvironment(environment):
         raise IndexError
 except IndexError:
-    print("Which work queue are you deploying to? (production/development)")
-    exit()
+    environment = os.getenv('DEPLOY_ENVIRONMENT')
+    if notEnvironment(environment):
+        
+        question = [
+            inquirer.List('environment',
+            message="Which workspace are you deploying to? (production/development/local)",
+            choices=[*valid_environments, 'none']
+        ),
+        ]
+
+        answer = inquirer.prompt(question)   
+
+        environment = answer["environment"] 
+
+        if environment == "none":
+            print("Deployment cancelled.")
+            exit()    
 
 
 # Get config file and parse it
 f = open("config.json")
 config = json.load(f)
 
-# Set up ENV variables for deployment
-subprocess.run(
-    ["echo", f"DATABASE={config['deploy_to_database']}",">>","$GITHUB_ENV"], 
-    ["echo", f"WORK_QUEUE={environment}", ">>","$GITHUB_ENV"]
+github_credentials_block = GitHubCredentials.load("github-access")
+repository_block = GitHubRepository(
+    credentials=github_credentials_block,
+    repository_url=f'https://gitbub.com/{config["repository_url"]}',
+    reference="main" if environment == "production" else "develop"
 )
 
 az_block = Azure.load("flow-storage")
-migrate_database = False
 
+# Let's deploy it/them
 for deployment in config["deployments"]:
+    
     # Assume there is only one deployment
     deployment_name = "main"
     path = config["flow_name"]
@@ -39,25 +78,43 @@ for deployment in config["deployments"]:
         deployment_name = deployment["name"]
         path = f'{config["flow_name"]}/{deployment["name"]}'
 
-    print(f"Deploying {deployment_name} to {path}...", end='')
+    print(f"Deploying {deployment_name} to {path if environment != 'local' else environment}...", end='')
 
     try:
+        docker_block_name = f'{config["flow_name"]}-{deployment_name}'.replace(' ', '-').replace('_', '-').lower()
+        docker_container_block = DockerContainer(
+            name=docker_block_name,
+            image="prefect_with_unixodbc:latest",
+            auto_remove=True,
+            # We want to always use our local image, so we NEVER pull it
+            image_pull_policy=ImagePullPolicy.NEVER,
+            env = {"EXTRA_PIP_PACKAGES": f"adlfs {replace_line_breaks_with_spaces('requirements.txt')}"}
+        )
+
+        docker_container_block.save(docker_block_name, overwrite=True)
+
+        # Don't set a schedule if there is none, or if this is NOT production
+        if "schedule" not in deployment or deployment["schedule"] == "" or environment != "production":
+            deployment["schedule"] = None
+        else:
+            deployment["schedule"] = CronSchedule(cron=deployment["schedule"], timezone="America/New_York")
+        
         d = Deployment.build_from_flow(
             flow=pipeline.with_options(name=config["flow_name"]),
             name=deployment_name,
             description=f"{config['description']} - {deployment['description']}",
             tags=config["tags"] + deployment["tags"],
             parameters=deployment["parameters"],
-            work_queue_name=environment,
-            work_pool_name=f"{environment}-work-pool",
+            work_queue_name="default",
+            work_pool_name="default-agent-pool",
             apply=True,
-            storage=az_block,
+            storage=repository_block if environment in ["production", "development"] else "local",
             path=path,
-            schedule=(
-                CronSchedule(cron=deployment["schedule"], timezone="America/New_York")
-            ),
-            is_schedule_active=True,
+            schedule=deployment["schedule"],
+            is_schedule_active=True if environment == "production" or deployment["schedule"] != None else False,
+            infrastructure=docker_container_block
         )
+
     except:
         print("FAILED!")
         print("Probably because of this:")
@@ -65,17 +122,3 @@ for deployment in config["deployments"]:
         exit()
     else:
         print("SUCCESS!")
-        if "sql_deploy_to" in config:
-            migrate_database = True
-    
-    # TO DO
-    # Migrate Database
-    # if migrate == True:
-    #     url = os.getenv("DATABASE_URL")
-    #     username = os.getenv("DATABASE_USERNAME")
-    #     password = os.getenv("DATABASE_PASSWORD")
-
-    #     cmd_str = f"docker run --rm -v sql:/flyway/sql flyway/flyway -url=jdbc:{url} -user={username} -password={password} migrate"
-    #     subprocess.run(cmd_str, shell=True)
-
-    

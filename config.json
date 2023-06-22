@@ -1,10 +1,10 @@
 {
     "template_version": 1,
-    "flow_name": "",
+    "flow_name": "flow-template",
     "deployments": [
         {
             "name": "main",
-            "schedule": "0 7 * * 1",
+            "schedule": "",
             "description": "",
             "tags": [],
             "parameters": {}
@@ -12,7 +12,7 @@
     ],
     "description": "",
     "tags": [],
-    "sql_deploy_to ": "",
+    "repository_url":"cdny/prefect_flow_template",
     "flow_data": {
         "production": {},
         "development": {}

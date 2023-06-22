@@ -17,6 +17,8 @@ def pipeline():
     config = read_flow_config()
     secrets = azure_key_vault_block.get_secrets()
 
+    logging.warning("Hello, world?")
+
     logging.info(config, secrets)
 
     return True
