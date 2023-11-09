@@ -3,7 +3,7 @@ import json, os, traceback, sys
 import inquirer
 
 from prefect.deployments import Deployment
-from prefect.filesystems import Azure
+from prefect.filesystems import Azure, LocalFileSystem
 from prefect.server.schemas.schedules import CronSchedule
 from prefect.infrastructure.container import DockerContainer, ImagePullPolicy
 
@@ -56,6 +56,7 @@ f = open("config.json")
 config = json.load(f)
 
 az_block = Azure.load("flow-storage")
+local_file_system_block = LocalFileSystem.load("local")
 
 # Let's deploy it/them
 for deployment in config["deployments"]:
@@ -99,7 +100,7 @@ for deployment in config["deployments"]:
             work_queue_name="default",
             work_pool_name="default-agent-pool",
             apply=True,
-            storage=az_block if environment in ["production", "development"] else "local",
+            storage=az_block if environment in ["production", "development"] else local_file_system_block,
             path=path,
             schedule=deployment["schedule"],
             is_schedule_active=True if environment == "production" or deployment["schedule"] != None else False,
