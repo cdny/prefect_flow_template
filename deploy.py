@@ -104,9 +104,7 @@ for deployment in config["deployments"]:
         ):
             deployment["schedule"] = None
         else:
-            deployment["schedule"] = CronSchedule(
-                cron=deployment["schedule"], timezone="America/New_York"
-            )
+            deployment["schedule"] = CronSchedule(cron=deployment["schedule"])
 
         d = Deployment.build_from_flow(
             flow=pipeline.with_options(name=config["flow_name"]),
