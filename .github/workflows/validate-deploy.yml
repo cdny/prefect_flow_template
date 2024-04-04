@@ -48,7 +48,7 @@ jobs:
           git pull
           cp template-deploy.py deploy.py
           git commit -a -m "Updated deploy.py"
-          git push origin sync-files-${{ github.run_id }}
+          git push origin update-deploy-file-${{ github.run_id }}
           
 
       # Create PR
