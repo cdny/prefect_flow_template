@@ -40,7 +40,9 @@ jobs:
         if: ${{ steps.compare.outputs.isUpdated == 'false' }}
         run: |
           echo "Creating New Branch"
-          git checkout -b update-deploy-file-${{ github.run_id }} ${{ github.event.pull_request.head.ref }}
+          CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+          echo $CURRENT_BRANCH
+          git checkout -b update-deploy-file-${{ github.run_id }} $CURRENT_BRANCH
           git pull
           cp template-deploy.py deploy.py
           git commit -a -m "Updated deploy.py"
