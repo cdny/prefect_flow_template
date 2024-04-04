@@ -12,7 +12,7 @@ jobs:
 
       - name: Checkout Repo
         uses: actions/checkout@v2
-        
+
       - name: Fetch Repo Deploy File
         run: |
           wget -O template-deploy.py https://raw.githubusercontent.com/cdny/prefect_flow_template/main/deploy.py
@@ -33,11 +33,11 @@ jobs:
         run: |
           if [ ${{ steps.compare.outputs.isUpdated }} ]; then
             echo "Deploy.py is Correct"
-            exit 0
           fi
 
       # If Repo File != Template File, Create New Branch
       - name: Create New Branch
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
         run: |
           echo "Creating New Branch"
           git checkout -b update-deploy-file-${{ github.run_id }} ${{ github.event.pull_request.head.ref }}
@@ -49,6 +49,7 @@ jobs:
 
       # Create PR
       - name: Create PR
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -72,6 +73,7 @@ jobs:
 
       # Exit Fail & Message to Check PRs
       - name: Exit Message
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
         run: |
           echo "Deploy.py file was outdated. Check for new PRs before merging branch to develop."
           exit 1
