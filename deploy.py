@@ -1,4 +1,3 @@
-#File Difference Test
 import json, os, traceback, sys
 
 import inquirer
