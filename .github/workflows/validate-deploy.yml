@@ -43,6 +43,8 @@ jobs:
           echo ${{ github.ref_name }}
           EMAIL=$(git log -1 --pretty=format:'%ae')
           USERNAME=$(git log -1 --pretty=format:'%an')
+          echo "$EMAIL"
+          echo "$NAME"
           git config user.email "$EMAIL"
           git config user.name "$NAME"
           git checkout -b update-deploy-file-${{ github.run_id }}
