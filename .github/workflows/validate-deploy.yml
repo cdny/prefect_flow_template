@@ -61,7 +61,7 @@ jobs:
             async function createPR() {
               const owner = context.repo.owner;
               const repo = context.repo.repo;
-              const base = context.base.ref;
+              const base = ${{ github.ref_name }}
               const head = 'update-deploy-file-${{ github.run_id }}';
               const title = 'Update deploy.py';
               const body = 'Repo was using an outdated version of deploy.py';
