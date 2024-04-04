@@ -31,6 +31,7 @@ jobs:
           if [ ${{ steps.compare.outputs.isUpdated }} ]; then
             echo "Deploy.py is Correct"
             exit 0
+          fi
 
       # If Repo File != Template File, Create New Branch
       - name: Create New Branch
