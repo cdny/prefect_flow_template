@@ -41,7 +41,8 @@ jobs:
         run: |
           echo "Creating New Branch"
           echo ${{ github.ref_name }}
-          git checkout -b update-deploy-file-${{ github.run_id }} ${{ github.ref_name }}
+          git checkout -b update-deploy-file-${{ github.run_id }}
+          git branch --set-upstream-to=origin/<branch> update-deploy-file-${{ github.run_id }}
           git pull
           cp template-deploy.py deploy.py
           git commit -a -m "Updated deploy.py"
