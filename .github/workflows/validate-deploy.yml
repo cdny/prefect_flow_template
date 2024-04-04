@@ -41,6 +41,10 @@ jobs:
         run: |
           echo "Creating New Branch"
           echo ${{ github.ref_name }}
+          EMAIL=$(git log -1 --pretty=format:'%ae')
+          USERNAME=$(git log -1 --pretty=format:'%an')
+          git config user.email "$EMAIL"
+          git config user.name "$NAME"
           git checkout -b update-deploy-file-${{ github.run_id }}
           git branch --set-upstream-to=${{ github.ref_name }}
           git pull
