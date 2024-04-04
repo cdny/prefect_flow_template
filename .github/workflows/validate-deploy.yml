@@ -23,6 +23,7 @@ jobs:
           else
             echo "::set-output name=isUpdated::false"
             echo "Deploy.py is Outdated"
+          fi
 
       # If Repo File == Template File, Log & End
       - name: Valid Deploy.py File
