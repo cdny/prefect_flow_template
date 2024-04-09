@@ -1,0 +1,77 @@
+on:
+  push:
+    branches-ignore:
+        - main
+        - develop
+
+jobs:
+  validate-deploy:
+    name: Validate-Deploy-File
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Fetch Repo Deploy File
+        run: |
+          wget -O template-deploy.py https://raw.githubusercontent.com/cdny/prefect_flow_template/main/deploy.py
+
+      - name: Compare Deploy Files
+        id: compare
+        run: |
+          if cmp -s deploy.py template-deploy.py; then
+            echo "Deploy.py is Correct"
+            echo "::set-output name=isUpdated::true"
+          else
+            echo "::set-output name=isUpdated::false"
+            echo "Deploy.py is Outdated"
+          fi
+
+      # If Repo File == Template File, Log & End
+      - name: Valid Deploy.py File
+        run: |
+          if [ ${{ steps.compare.outputs.isUpdated }} ]; then
+            echo "Deploy.py is Correct"
+          fi
+
+      # If Repo File != Template File, Create New Branch
+      - name: Create New Branch
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
+        run: |
+          echo "Creating New Branch"
+          echo ${{ github.ref_name }}
+          git config user.email "actions@github.com"
+          git config user.name "Github Actions"
+          git checkout -b update-deploy-file-${{ github.run_id }}
+          git branch --set-upstream-to=${{ github.ref_name }}
+          git pull
+          cp template-deploy.py deploy.py
+          git commit -a -m "Updated deploy.py"
+          git push origin update-deploy-file-${{ github.run_id }}
+          
+
+      # Create PR
+      - name: Create PR
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            async function createPR() {
+              const owner = context.repo.owner;
+              const repo = context.repo.repo;
+              const base = "${{ github.ref_name }}"
+              const head = 'update-deploy-file-${{ github.run_id }}';
+              const title = 'Update deploy.py';
+              const body = 'Repo was using an outdated version of deploy.py';
+              await github.pulls.create({owner,repo,title,body,base,head});
+            }
+            createPR();
+
+      # Exit Fail & Message to Check PRs
+      - name: Exit Message
+        if: ${{ steps.compare.outputs.isUpdated == 'false' }}
+        run: |
+          echo "Deploy.py file was outdated. Check for new PRs before merging branch to develop."
+          exit 1
