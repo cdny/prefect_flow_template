@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     name: Deploy Flow
-    if: github.event.pull_request.number != null
     runs-on: ubuntu-latest
     steps:
       - name: Sets env vars for production
