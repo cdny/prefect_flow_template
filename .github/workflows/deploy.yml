@@ -1,21 +1,21 @@
 on:
-  pull_request:
+  push:
     branches:
       - main
       - develop
 jobs:
   build:
     name: Deploy Flow
-    if: github.event.pull_request.merged
+    if: github.event.pull_request.number != null
     runs-on: ubuntu-latest
     steps:
       - name: Sets env vars for production
         run: echo "WORK_QUEUE=production" >> $GITHUB_ENV
-        if: github.base_ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
 
       - name: Sets env vars for production
         run: echo "WORK_QUEUE=development" >> $GITHUB_ENV
-        if: github.base_ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/develop'
 
       - name: Checkout
         uses: actions/checkout@v3
