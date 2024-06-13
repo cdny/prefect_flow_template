@@ -57,59 +57,61 @@ config = json.load(f)
 
 az_block = Azure.load("flow-storage")
 
-# Let's deploy it/them
-for deployment in config["deployments"]:
-    
-    # Assume there is only one deployment
-    deployment_name = "main"
-    path = config["flow_name"]
+if config["flow_name"] != "flow-template":
 
-    # However, if there is more than one deployment...
-    if len(config["deployments"]) > 1:
-        deployment_name = deployment["name"]
-        path = f'{config["flow_name"]}/{deployment["name"]}'
+    # Let's deploy it/them
+    for deployment in config["deployments"]:
 
-    print(f"Deploying {deployment_name} to {path if environment != 'local' else environment}...", end='')
+        # Assume there is only one deployment
+        deployment_name = "main"
+        path = config["flow_name"]
 
-    try:
-        docker_block_name = f'{config["flow_name"]}-{deployment_name}'.replace(' ', '-').replace('_', '-').lower()
-        docker_container_block = DockerContainer(
-            name=docker_block_name,
-            image="prefect_with_unixodbc:latest",
-            auto_remove=True,
-            # We want to always use our local image, so we NEVER pull it
-            image_pull_policy=ImagePullPolicy.NEVER,
-            env = {"EXTRA_PIP_PACKAGES": f"adlfs {replace_line_breaks_with_spaces('requirements.txt')}"}
-        )
+        # However, if there is more than one deployment...
+        if len(config["deployments"]) > 1:
+            deployment_name = deployment["name"]
+            path = f'{config["flow_name"]}/{deployment["name"]}'
 
-        docker_container_block.save(docker_block_name, overwrite=True)
+        print(f"Deploying {deployment_name} to {path if environment != 'local' else environment}...", end='')
 
-        # Don't set a schedule if there is none, or if this is NOT production
-        if "schedule" not in deployment or deployment["schedule"] == "" or environment != "production":
-            deployment["schedule"] = None
+        try:
+            docker_block_name = f'{config["flow_name"]}-{deployment_name}'.replace(' ', '-').replace('_', '-').lower()
+            docker_container_block = DockerContainer(
+                name=docker_block_name,
+                image="prefect_with_unixodbc:latest",
+                auto_remove=True,
+                # We want to always use our local image, so we NEVER pull it
+                image_pull_policy=ImagePullPolicy.NEVER,
+                env = {"EXTRA_PIP_PACKAGES": f"adlfs {replace_line_breaks_with_spaces('requirements.txt')}"}
+            )
+
+            docker_container_block.save(docker_block_name, overwrite=True)
+
+            # Don't set a schedule if there is none, or if this is NOT production
+            if "schedule" not in deployment or deployment["schedule"] == "" or environment != "production":
+                deployment["schedule"] = None
+            else:
+                deployment["schedule"] = CronSchedule(cron=deployment["schedule"], timezone="America/New_York")
+
+            d = Deployment.build_from_flow(
+                flow=pipeline.with_options(name=config["flow_name"]),
+                name=deployment_name,
+                description=f"{config['description']} - {deployment['description']}",
+                tags=config["tags"] + deployment["tags"],
+                parameters=deployment["parameters"],
+                work_queue_name="default",
+                work_pool_name="default-agent-pool",
+                apply=True,
+                storage=az_block,
+                path=path,
+                schedule=deployment["schedule"],
+                is_schedule_active=True if environment == "production" or deployment["schedule"] != None else False,
+                infrastructure=docker_container_block
+            )
+
+        except:
+            print("FAILED!")
+            print("Probably because of this:")
+            traceback.print_exc()
+            exit()
         else:
-            deployment["schedule"] = CronSchedule(cron=deployment["schedule"], timezone="America/New_York")
-        
-        d = Deployment.build_from_flow(
-            flow=pipeline.with_options(name=config["flow_name"]),
-            name=deployment_name,
-            description=f"{config['description']} - {deployment['description']}",
-            tags=config["tags"] + deployment["tags"],
-            parameters=deployment["parameters"],
-            work_queue_name="default",
-            work_pool_name="default-agent-pool",
-            apply=True,
-            storage=az_block,
-            path=path,
-            schedule=deployment["schedule"],
-            is_schedule_active=True if environment == "production" or deployment["schedule"] != None else False,
-            infrastructure=docker_container_block
-        )
-
-    except:
-        print("FAILED!")
-        print("Probably because of this:")
-        traceback.print_exc()
-        exit()
-    else:
-        print("SUCCESS!")
+            print("SUCCESS!")
