@@ -1,5 +1,5 @@
 adlfs
 anyio==3.7.1
 black
-prefect==2.14.16
+prefect==3.6.28.dev2
 inquirer
